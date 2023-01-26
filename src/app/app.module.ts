@@ -14,7 +14,6 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSortModule } from '@angular/material/sort';
 
@@ -27,9 +26,8 @@ const materialModules = [
   MatPaginatorModule,
   MatTableModule,
   MatIconModule,
-  MatChipsModule,
   MatSelectModule,
-  MatSortModule
+  MatSortModule,
 ]
 
 @NgModule({
