@@ -25,3 +25,8 @@ Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To u
 ## Further help
 
 To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+
+##About site
+
+This is simple dashboard site where you can see users, use paginator, sort table by email, first name, last name or status, also you can search users. When you do one of these router link get updated and you can share link other people. If you reload page data will stay in the same condition as it was before the reload.
+Also you can add/update or delete user.
