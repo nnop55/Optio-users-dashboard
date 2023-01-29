@@ -16,6 +16,12 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSortModule } from '@angular/material/sort';
+import { StoreModule } from '@ngrx/store';
+import { EffectsModule } from '@ngrx/effects';
+import { StoreDevtoolsModule } from '@ngrx/store-devtools';
+import { environment } from '../environments/environment';
+import { userReducer } from './store/users.reducer';
+import { UsersEffects } from './store/users.effects';
 
 
 
@@ -41,7 +47,12 @@ const materialModules = [
     BrowserAnimationsModule,
     materialModules,
     FormsModule,
-    HttpClientModule
+    HttpClientModule,
+    StoreModule.forRoot({}, {}),
+    EffectsModule.forRoot([]),
+    StoreDevtoolsModule.instrument({ maxAge: 25, logOnly: environment.production }),
+    StoreModule.forFeature("users", userReducer),
+    EffectsModule.forFeature([UsersEffects])
   ],
   providers: [],
   bootstrap: [AppComponent]

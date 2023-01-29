@@ -9,9 +9,12 @@ import { MatSort, Sort } from '@angular/material/sort';
 import { Find } from '../models/find.model';
 import { Save } from '../models/save.model';
 import { fromEvent } from 'rxjs';
-import { debounceTime, distinctUntilChanged, filter, tap } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, filter, switchMap, tap } from 'rxjs/operators';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
+import { select, Store } from '@ngrx/store';
+import { selectUserById, selectUsers } from '../store/users.selector';
+import { invokeDeleteUserAPI, invokeSaveUserAPI, invokeUpdateUserAPI, invokeUsersApi, } from '../store/users.action';
 
 
 @Component({
@@ -37,11 +40,7 @@ export class UsersComponent implements OnInit {
   displayedColumns: string[] = ['email', 'firstName', 'lastName', 'Roles', 'locked', 'Delete'];
   dataSource = new MatTableDataSource();
 
-  rolesData: any[] = [
-    { value: "Admin", title: 'Admin' },
-    { value: "User", title: 'User' },
-    { value: "test", title: 'test' },
-  ];
+  rolesData: any[] = [];
 
   userStatus: any[] = [
     { value: true, viewValue: 'Active' },
@@ -51,11 +50,13 @@ export class UsersComponent implements OnInit {
   constructor(private _service: GlobalService,
     private activatedRoute: ActivatedRoute,
     private router: Router,
-    private location: Location) { }
+    private location: Location,
+    private store: Store<any>) { }
 
   ngOnInit(): void {
-    // this.getRoles();
+    this.getRoles();
     this.getParams();
+
   }
 
   updateRouteParameters() {               //Updating router params while data changed
@@ -116,7 +117,16 @@ export class UsersComponent implements OnInit {
 
 
   getRoles() {                      //Subscribe roles data 
-    const postData = {}
+    const postData = {
+      "typeId": 4,
+      "sortBy": "name",
+      "sortDirection": "asc",
+      "pageIndex": 0,
+      "pageSize": 50,
+      "includes": [
+        "code", "name"
+      ]
+    }
 
     this._service.getRoles(postData).subscribe((res: any) => {
       if (res.success) {
@@ -126,35 +136,54 @@ export class UsersComponent implements OnInit {
   }
 
 
-  getUsers(fromSearch: boolean = false, updateUrl: boolean = true) {       //Subscribe users data
+  getUsers(fromSearch: boolean = false, updateUrl: boolean = true) {  //Subscribe users data
+
     if (fromSearch) {
       this.matPaginator.pageIndex = 0;
     }
+
 
     if (updateUrl) {
       this.updateRouteParameters();
     }
 
-    const postData = {        //Data for body. Search and paginator data
+    this._service.test = {        //Data for body. Search and paginator data
       "pageIndex": this.matPaginator.pageIndex ? this.matPaginator.pageIndex : 0,
       "pageSize": this.matPaginator.pageSize ? this.matPaginator.pageSize : 5,
       ...this.searchData
     }
 
-    this._service.getUsers(postData).subscribe((res: Find) => {
+    this.store.dispatch(invokeUsersApi());
+
+    this.store.select(selectUsers).subscribe((res: any) => {
       if (res.success) {
         this.dataSource.data = res.data.entities;
         this.total = res.data.total;
       }
-    });
+    })
+
   }
 
-  addSaveUser() {              //Subscribe for add or update user 
-    this._service.addSaveUser(this.userItem).subscribe((res: Save) => {
+  createUser() {              //add or update user 
+    this.store.dispatch(invokeSaveUserAPI({ payload: { ...this.userItem } }));
+    this.store.select(selectUsers).subscribe((res: any) => {
       if (res.success) {
         this.userItem = new User();
-        this.getUsers();
+        this.store.dispatch(invokeUsersApi());
         this.validation();
+        this.closeDrawer();
+      }
+    })
+  }
+
+  updateUser() {
+    this.store.dispatch(invokeUpdateUserAPI({ payload: { ...this.userItem } }));
+    this.store.select(selectUserById).subscribe((res: any) => {
+      if (res.success) {
+        this.userItem = new User();
+        this.store.dispatch(invokeUsersApi());
+        this.validation();
+        this.closeDrawer();
       }
     })
   }
@@ -166,16 +195,18 @@ export class UsersComponent implements OnInit {
       showCancelButton: false,
       confirmButtonText: 'Cancel',
       denyButtonText: `Delete`,
-    }).then((result) => {
+    }).then(async (result) => {
       /* Read more about isConfirmed, isDenied below */
       if (result.isConfirmed) {
         Swal.fire('Cancelled', '', 'info')
       } else if (result.isDenied) {
         this.userItem.id = id;
-        this._service.removeUser(this.userItem).subscribe((res: any) => {
+        console.log(this.userItem)
+        await this.store.dispatch(invokeDeleteUserAPI({ id: this.userItem.id }));
+        this.store.select(selectUsers).subscribe((res: any) => {
           if (res.success) {
-            this.getUsers();
             Swal.fire('Deleted', '', 'success')
+            this.getUsers();
           }
         })
       }

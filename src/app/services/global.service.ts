@@ -12,7 +12,7 @@ import { User } from '../models/user.model';
 })
 export class GlobalService {                             //Headers for authorization
   headers: any = new HttpHeaders({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${environment.auth_token}` });
-
+  test: any = new Object();
   constructor(private http: HttpClient) { }
 
   getUsers(body: User): Observable<Find> {                //Get users data
@@ -23,12 +23,12 @@ export class GlobalService {                             //Headers for authoriza
     return this.http.post<Save>(`${environment.baseUrl}/admin/users/save`, body, { headers: this.headers })
   }
 
-  removeUser(body: User): Observable<boolean> {           //Remove user
+  removeUser(body: any): Observable<boolean> {           //Remove user
     return this.http.post<boolean>(`${environment.baseUrl}/admin/users/remove/`, body, { headers: this.headers })
   }
 
   getRoles(body: any): Observable<any> {                  //Get roles data
-    return this.http.post<any>(`${environment.baseUrl}/admin/role/permissions/find`, body, { headers: this.headers })
+    return this.http.post<any>(`${environment.baseUrl}/reference-data/find`, body, { headers: this.headers })
   }
 
 }

@@ -44,7 +44,7 @@
                             <mat-label>Roles</mat-label>
                             <mat-select multiple [(ngModel)]="userItem.roles" (ngModelChange)="validation()">
                                 <mat-option *ngFor="let roles of rolesData"
-                                    [value]="roles.value">{{roles.title}}</mat-option>
+                                    [value]="roles.code">{{roles.name}}</mat-option>
                             </mat-select>
                         </mat-form-field>
                     </div>
@@ -55,11 +55,11 @@
                             <button (click)="closeDrawer()">Cancel</button>
                         </div>
                         <div>
-                            <button [disabled]="disableSaveBtn" (click)="addSaveUser()">
-                                <span *ngIf="userItem.id">
+                            <button [disabled]="disableSaveBtn">
+                                <span *ngIf="userItem.id" (click)="updateUser()">
                                     Save
                                 </span>
-                                <span *ngIf="!userItem.id">
+                                <span *ngIf="!userItem.id" (click)="createUser()">
                                     Add
                                 </span>
                             </button>
