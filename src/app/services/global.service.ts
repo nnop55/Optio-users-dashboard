@@ -12,7 +12,7 @@ import { User } from '../models/user.model';
 })
 export class GlobalService {                             //Headers for authorization
   headers: any = new HttpHeaders({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${environment.auth_token}` });
-  test: any = new Object();
+
   constructor(private http: HttpClient) { }
 
   getUsers(body: User): Observable<Find> {                //Get users data

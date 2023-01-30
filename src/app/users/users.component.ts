@@ -1,20 +1,18 @@
-import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { GlobalService } from '../services/global.service';
 import { User } from '../models/user.model';
 import Swal from 'sweetalert2';
-import { MatPaginator, PageEvent } from '@angular/material/paginator';
-import { MatSort, Sort } from '@angular/material/sort';
-import { Find } from '../models/find.model';
-import { Save } from '../models/save.model';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatSort } from '@angular/material/sort';
 import { fromEvent } from 'rxjs';
-import { debounceTime, distinctUntilChanged, filter, switchMap, tap } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, filter, tap } from 'rxjs/operators';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { select, Store } from '@ngrx/store';
-import { selectUserById, selectUsers } from '../store/users.selector';
-import { invokeDeleteUserAPI, invokeSaveUserAPI, invokeUpdateUserAPI, invokeUsersApi, } from '../store/users.action';
+import { addUsersSelector, deleteUsersSelector, getRolesSelector, getUsersSelector, updateUsersSelector } from '../store/selector/users.selector';
+import { invokeDeleteUserAPI, invokeRolesApi, invokeSaveUserAPI, invokeUpdateUserAPI, invokeUsersApi, } from '../store/action/users.action';
 
 
 @Component({
@@ -108,7 +106,7 @@ export class UsersComponent implements OnInit {
 
   validation() {                          //Check inputs validation for disable or enable save/add button
     if (this.userItem.email != '' && this.userItem.firstName != '' && this.userItem.lastName != ''
-      && this.userItem.locked != undefined && this.userItem.roles.length > 0) {
+      && this.userItem.locked != undefined && this.userItem.roles && this.userItem.roles.length > 0) {
       this.disableSaveBtn = false;
     } else {
       this.disableSaveBtn = true
@@ -128,11 +126,14 @@ export class UsersComponent implements OnInit {
       ]
     }
 
-    this._service.getRoles(postData).subscribe((res: any) => {
+    this.store.dispatch(invokeRolesApi({ payload: postData }));
+
+    this.store.select(getRolesSelector).subscribe((res: any) => {
       if (res.success) {
         this.rolesData = res.data.entities;
       }
-    });
+    })
+
   }
 
 
@@ -147,15 +148,15 @@ export class UsersComponent implements OnInit {
       this.updateRouteParameters();
     }
 
-    this._service.test = {        //Data for body. Search and paginator data
+    const postData = {        //Data for body. Search and paginator data
       "pageIndex": this.matPaginator.pageIndex ? this.matPaginator.pageIndex : 0,
       "pageSize": this.matPaginator.pageSize ? this.matPaginator.pageSize : 5,
       ...this.searchData
     }
 
-    this.store.dispatch(invokeUsersApi());
+    this.store.dispatch(invokeUsersApi({ payload: postData }));
 
-    this.store.select(selectUsers).subscribe((res: any) => {
+    this.store.select(getUsersSelector).subscribe((res: any) => {
       if (res.success) {
         this.dataSource.data = res.data.entities;
         this.total = res.data.total;
@@ -164,28 +165,40 @@ export class UsersComponent implements OnInit {
 
   }
 
-  createUser() {              //add or update user 
-    this.store.dispatch(invokeSaveUserAPI({ payload: { ...this.userItem } }));
-    this.store.select(selectUsers).subscribe((res: any) => {
-      if (res.success) {
-        this.userItem = new User();
-        this.store.dispatch(invokeUsersApi());
-        this.validation();
-        this.closeDrawer();
-      }
-    })
+  createUser() {              //Add user 
+    if (!this.disableSaveBtn) {
+      this.validation();
+
+      this.store.dispatch(invokeSaveUserAPI({ payload: this.userItem }));
+
+      this.store.pipe(select(addUsersSelector)).subscribe((res: any) => {
+        if (res.success) {
+          this.userItem = new User();
+          Swal.fire('User Added', '', 'success')
+          this.getUsers();
+          this.closeDrawer();
+        } else {
+          Swal.fire('User already Exist', '', 'info')
+        }
+      })
+    }
   }
 
-  updateUser() {
-    this.store.dispatch(invokeUpdateUserAPI({ payload: { ...this.userItem } }));
-    this.store.select(selectUserById).subscribe((res: any) => {
-      if (res.success) {
-        this.userItem = new User();
-        this.store.dispatch(invokeUsersApi());
-        this.validation();
-        this.closeDrawer();
-      }
-    })
+  updateUser() {            //Update user
+    if (!this.disableSaveBtn) {
+      this.validation();
+
+      this.store.dispatch(invokeUpdateUserAPI({ payload: this.userItem }));
+      console.log(this.userItem)
+      this.store.select(updateUsersSelector).subscribe((res: any) => {
+        if (res.success) {
+          Swal.fire('User Updated', '', 'success')
+          this.userItem = new User();
+          this.getUsers();
+          this.closeDrawer();
+        }
+      })
+    }
   }
 
   deleteUser(id: any) {        //Subscribe for remove user and sweetalert2
@@ -201,11 +214,12 @@ export class UsersComponent implements OnInit {
         Swal.fire('Cancelled', '', 'info')
       } else if (result.isDenied) {
         this.userItem.id = id;
-        console.log(this.userItem)
-        await this.store.dispatch(invokeDeleteUserAPI({ id: this.userItem.id }));
-        this.store.select(selectUsers).subscribe((res: any) => {
+
+        this.store.dispatch(invokeDeleteUserAPI({ id: this.userItem.id }));
+
+        this.store.select(deleteUsersSelector).subscribe((res: any) => {
           if (res.success) {
-            Swal.fire('Deleted', '', 'success')
+            Swal.fire('User Deleted', '', 'success')
             this.getUsers();
           }
         })
@@ -219,7 +233,12 @@ export class UsersComponent implements OnInit {
 
   editUser(item: User) {             //Edit user from drawer.
     this.isOpened = true;
-    this.userItem = item;
+    this.userItem.id = item.id;
+    this.userItem.email = item.email;
+    this.userItem.firstName = item.firstName;
+    this.userItem.lastName = item.lastName;
+    this.userItem.locked = item.locked;
+    this.userItem.roles = item.roles;
     this.validation();
   }
 

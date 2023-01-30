@@ -20,8 +20,8 @@ import { StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { environment } from '../environments/environment';
-import { userReducer } from './store/users.reducer';
-import { UsersEffects } from './store/users.effects';
+import { addUserReducer, deleteUserReducer, getRoleReducer, getUserReducer, updateUserReducer } from './store/reducer/users.reducer';
+import { UsersEffects } from './store/effects/users.effects';
 
 
 
@@ -34,6 +34,18 @@ const materialModules = [
   MatIconModule,
   MatSelectModule,
   MatSortModule,
+];
+
+const ngrxModules = [
+  StoreModule.forRoot({}, {}),
+  EffectsModule.forRoot([]),
+  StoreDevtoolsModule.instrument({ maxAge: 25, logOnly: environment.production }),
+  StoreModule.forFeature("getUsers", getUserReducer),
+  StoreModule.forFeature("updateUsers", updateUserReducer),
+  StoreModule.forFeature("deleteUsers", deleteUserReducer),
+  StoreModule.forFeature("addUsers", addUserReducer),
+  StoreModule.forFeature("getRoles", getRoleReducer),
+  EffectsModule.forFeature([UsersEffects])
 ]
 
 @NgModule({
@@ -48,11 +60,7 @@ const materialModules = [
     materialModules,
     FormsModule,
     HttpClientModule,
-    StoreModule.forRoot({}, {}),
-    EffectsModule.forRoot([]),
-    StoreDevtoolsModule.instrument({ maxAge: 25, logOnly: environment.production }),
-    StoreModule.forFeature("users", userReducer),
-    EffectsModule.forFeature([UsersEffects])
+    ngrxModules
   ],
   providers: [],
   bootstrap: [AppComponent]
